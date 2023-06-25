@@ -1,40 +1,17 @@
 package model;
 
 public class Note {
-    static Integer count;
-    private Integer id;
+    private final int id;
     private String title;
     private String text;
 
-    public Note() {
-        if (count != null) {
-            count = 0;
-        } else count++;
-        setId();
-    }
 
-    public Note(String title) {
-        this();
-        this.title = title;
-    }
-
-    public Note(String title, String text) {
-        this();
-        this.title = title;
-        this.text = text;
-    }
-
-    public Note(Integer id, String title, String text) {
+    public Note(int id, String title, String text) {
         this.id = id;
         this.title = title;
         this.text = text;
     }
 
-    void setId() {
-        if (count.equals(null)) {
-            id = 0;
-        } else id += 1;
-    }
 
     public void setTitle(String title) {
         this.title = title;
@@ -54,5 +31,10 @@ public class Note {
 
     public Integer getId() {
         return id;
+    }
+
+    @Override
+    public String toString() {
+        return "Название: " + title + '\n' + text;
     }
 }

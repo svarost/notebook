@@ -1,7 +1,6 @@
 package model;
 
 import java.io.*;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
@@ -10,7 +9,7 @@ import java.util.List;
 
 public class FileNoteRepository implements NoteRepository {
     private String noteDirectory = "notes";
-    private NoteMapper mapper;
+    private NoteMapper mapper = new NoteMapper();
 
     public FileNoteRepository() {
         creatNotesDirectory();
@@ -20,9 +19,9 @@ public class FileNoteRepository implements NoteRepository {
         File directory = new File(noteDirectory);
         if (!directory.exists()) {
             if (directory.mkdir()) {
-                System.out.println("Папка для сохранения заметок создана.");
+                System.out.println("РџР°РїРєР° РґР»СЏ СЃРѕС…СЂР°РЅРµРЅРёСЏ Р·Р°РјРµС‚РѕРє СЃРѕР·РґР°РЅР°.");
             } else {
-                System.out.println("Не удалось создать папку для хранения заметок.");
+                System.out.println("РќРµ СѓРґР°Р»РѕСЃСЊ СЃРѕР·РґР°С‚СЊ РїР°РїРєСѓ РґР»СЏ С…СЂР°РЅРµРЅРёСЏ Р·Р°РјРµС‚РѕРє.");
             }
         }
     }
@@ -36,7 +35,7 @@ public class FileNoteRepository implements NoteRepository {
     }
 
     private Note fileToNote(File file) {
-        StringBuilder text = null;
+        StringBuilder text = new StringBuilder();
         try {
             FileReader fr = new FileReader(file);
             BufferedReader reader = new BufferedReader(fr);
@@ -45,6 +44,7 @@ public class FileNoteRepository implements NoteRepository {
             while ((line = reader.readLine()) != null) {
                 text.append(line);
             }
+            fr.close();
         } catch (FileNotFoundException e) {
             System.out.println(e.getMessage());
         } catch (IOException e) {
@@ -57,11 +57,11 @@ public class FileNoteRepository implements NoteRepository {
     public void creatNote(Note note) {
         String fileName = note.getTitle() + ".txt";
         Path filePath = Path.of(noteDirectory, fileName);
+        String noteText = mapper.map(note);
         try {
-//            Files.write(filePath, note.getText().getBytes(StandardCharsets.UTF_8))
-            Files.write(filePath, note.getText().getBytes(), StandardOpenOption.CREATE);
+            Files.write(filePath, noteText.getBytes(), StandardOpenOption.CREATE);
         } catch (IOException e) {
-            System.out.println("Ошибка при сохранении заметки.");
+            System.out.println("РћС€РёР±РєР° РїСЂРё СЃРѕС…СЂР°РЅРµРЅРёРё Р·Р°РјРµС‚РєРё.");
             e.printStackTrace();
         }
     }
@@ -70,7 +70,7 @@ public class FileNoteRepository implements NoteRepository {
     public List<Note> getNoteList() {
         File[] noteFiles = getNoteFiles();
         if (noteFiles == null || noteFiles.length == 0) {
-            System.out.println("Заметки не найдены.");
+            System.out.println("Р—Р°РјРµС‚РєРё РЅРµ РЅР°Р№РґРµРЅС‹.");
             return null;
         } else {
             List<Note> noteList = new ArrayList<>();
@@ -82,7 +82,7 @@ public class FileNoteRepository implements NoteRepository {
     }
 
     @Override
-    public Note getNote(Integer noteID) {
+    public Note getNote(int noteID) {
         List<Note> noteList = getNoteList();
         for (Note note : noteList) {
             if (note.getId().equals(noteID)) {
@@ -93,7 +93,7 @@ public class FileNoteRepository implements NoteRepository {
     }
 
     @Override
-    public void deleteNote(Integer noteID) {
+    public void deleteNote(int noteID) {
         List<Note> noteList = getNoteList();
         for (Note note : noteList) {
             if (note.getId().equals(noteID)) {
@@ -103,15 +103,53 @@ public class FileNoteRepository implements NoteRepository {
                 if (Files.exists(filePath)) {
                     try {
                         Files.delete(filePath);
-                        System.out.println("Заметка удалена.");
+                        System.out.println("Р—Р°РјРµС‚РєР° СѓРґР°Р»РµРЅР°.");
                     } catch (IOException e) {
-                        System.out.println("Ошибка при удалении заметки.");
+                        System.out.println("РћС€РёР±РєР° РїСЂРё СѓРґР°Р»РµРЅРёРё Р·Р°РјРµС‚РєРё.");
                         e.printStackTrace();
                     }
                 } else {
-                    System.out.println("Заметка не найдена.");
+                    System.out.println("Р—Р°РјРµС‚РєР° РЅРµ РЅР°Р№РґРµРЅР°.");
                 }
             }
         }
+    }
+
+    @Override
+    public void updateNote(Note note) {
+        Note originNote = getNote(note.getId());
+        String originFileName = originNote.getTitle() + ".txt";
+        Path originPath = Path.of(noteDirectory, originFileName);
+        if (!originNote.getTitle().equals(note.getTitle())) {
+            Path filePath = Path.of(noteDirectory, note.getTitle() + ".txt");
+            try {
+                Files.move(originPath, filePath);
+
+            } catch (IOException e) {
+                System.out.println("РќРµ СѓРґР°Р»РѕСЃСЊ РїРµСЂРµРёРјРµРЅРѕРІР°С‚СЊ Р·Р°РјРµС‚РєСѓ.");
+            }
+        }
+        String text = mapper.map(note);
+
+        try {
+            FileWriter fw = new FileWriter(String.valueOf(Path.of(noteDirectory, note.getTitle() + ".txt")));
+            fw.write(text);
+            fw.close();
+        } catch (IOException e) {
+            System.out.println("РћС€РёР±РєР° РїСЂРё СЃРѕС…СЂР°РЅРµРЅРёРё Р·Р°РјРµС‚РєРё.");
+            e.printStackTrace();
+        }
+    }
+
+    @Override
+    public int setNoteID() {
+        List<Note> noteList = getNoteList();
+        int maxID = noteList.get(0).getId();
+        for (Note note : noteList) {
+            if (note.getId() > maxID) {
+                maxID = note.getId();
+            }
+        }
+        return maxID + 1;
     }
 }
